@@ -18,3 +18,6 @@ jobs:
 
       - name: Build the library
         run: make
+
+      - name: Run the regression tests
+        run: make eunit
