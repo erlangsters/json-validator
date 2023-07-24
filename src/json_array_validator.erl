@@ -8,22 +8,36 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, July 2023
 %%
 -module(json_array_validator).
--behaviour(term_validator).
+-behavior(term_validator).
 
--export([mandatory_options/0]).
--export([options/0]).
+-export([options/1]).
+
 -export([pre_validate/3]).
 -export([validate/3]).
 -export([post_validate/2]).
 
-mandatory_options() -> [].
-options() -> [].
+%%
+%% JSON array validator.
+%%
+%% This module implements the JSON array validator. It re-uses the
+%% implementation of the built-in list validator of ETV.
+%%
 
-pre_validate(Term, _Options, _Validators) ->
-    {valid, Term}.
+options(optional) ->
+    list_validator:options(optional);
+options(mandatory) ->
+    list_validator:options(mandatory).
 
-validate(Term, _Option, _Validators) ->
-    {valid, Term}.
+pre_validate(Term, Options, Validators) ->
+    case list_validator:pre_validate(Term, Options, Validators) of
+        {invalid, not_list} ->
+            {invalid, not_array};
+        Any ->
+            Any
+    end.
 
-post_validate(_Term, _Validators) ->
-    valid.
+validate(Term, Option, Validators) ->
+    list_validator:validate(Term, Option, Validators).
+
+post_validate(Term, Validators) ->
+    list_validator:post_validate(Term, Validators).
