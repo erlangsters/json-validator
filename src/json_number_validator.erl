@@ -10,20 +10,29 @@
 -module(json_number_validator).
 -behaviour(term_validator).
 
--export([mandatory_options/0]).
--export([options/0]).
+-export([options/1]).
+
 -export([pre_validate/3]).
 -export([validate/3]).
 -export([post_validate/2]).
 
-mandatory_options() -> [].
-options() -> [].
+%%
+%% JSON number validator.
+%%
+%% This module implements the JSON number validator. It re-uses the
+%% implementation of the built-in number validator of ETV.
+%%
 
-pre_validate(Term, _Options, _Validators) ->
-    {valid, Term}.
+options(optional) ->
+    number_validator:options(optional);
+options(mandatory) ->
+    number_validator:options(mandatory).
 
-validate(Term, _Option, _Validators) ->
-    {valid, Term}.
+pre_validate(Term, Options, Validators) ->
+    number_validator:pre_validate(Term, Options, Validators).
 
-post_validate(_Term, _Validators) ->
-    valid.
+validate(Term, Option, Validators) ->
+    number_validator:validate(Term, Option, Validators).
+
+post_validate(Term, Validators) ->
+    number_validator:post_validate(Term, Validators).
