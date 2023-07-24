@@ -8,19 +8,30 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, July 2023
 %%
 -module(json_bool_validator).
--behaviour(term_validator).
+-behavior(term_validator).
 
--export([mandatory_options/0]).
--export([options/0]).
+-export([options/1]).
+
 -export([pre_validate/3]).
 -export([validate/3]).
 -export([post_validate/2]).
 
-mandatory_options() -> [].
-options() -> [].
+%%
+%% JSON boolean validator.
+%%
+%% This module implements the JSON boolean validator. It only accepts the
+%% 'true' and 'false' atoms.
+%%
 
-pre_validate(Term, _Options, _Validators) ->
-    {valid, Term}.
+options(optional) -> [];
+options(mandatory) -> [].
+
+pre_validate(true, _Options, _Validators) ->
+    {valid, true, []};
+pre_validate(false, _Options, _Validators) ->
+    {valid, false, []};
+pre_validate(_Term, _Options, _Validators) ->
+    {invalid, not_bool}.
 
 validate(Term, _Option, _Validators) ->
     {valid, Term}.
