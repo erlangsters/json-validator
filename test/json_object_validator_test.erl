@@ -39,7 +39,7 @@ json_object_validator_fields_test() ->
     },
 
     % Test mandatory fields.
-    {invalid, {keys, [{"foo", missing}]}} = term_validator:validate(#{
+    {invalid, {missing_fields, ["foo"]}} = term_validator:validate(#{
         <<"bar">> => 42
     }, Format, Validators),
 
@@ -50,26 +50,38 @@ json_object_validator_fields_test() ->
     }, Format, Validators),
 
     % Test invalid fields.
-    {invalid, {keys, [{"bar", invalid, not_number}]}} = term_validator:validate(#{
+    {invalid, {fields, [{"bar", not_number}]}} = term_validator:validate(#{
         <<"foo">> => false,
         <<"bar">> => true
     }, Format, Validators),
 
     % Test extra fields.
-    {invalid, {keys, [{"quz", unexpected}]}} = term_validator:validate(#{
+    {invalid, {unexpected_fields, ["quz"]}} = term_validator:validate(#{
         <<"foo">> => false,
         <<"bar">> => 42,
         <<"quz">> => <<"Hello world!">>
     }, Format, Validators),
 
-    % Test extra fields.
-    {invalid, {keys, [{"quz", unexpected}]}} = term_validator:validate(#{
-        <<"foo">> => false,
-        <<"bar">> => 42,
-        <<"quz">> => <<"Hello world!">>
+    % Test lazy validation.
+    {invalid, {fields, Fields}} = term_validator:validate(#{
+        <<"foo">> => 42,
+        <<"bar">> => <<"Hello world!">>
     }, Format, Validators),
+    true = lists:member({"foo", not_bool}, Fields),
+    true = lists:member({"bar", not_number}, Fields),
 
-    FormatWithDynamic = {object, [{fields, [
+    ok.
+
+json_object_validator_dynamic_test() ->
+    % Same format as above test, but with the "dynamic" option enabled.
+    Validators = #{
+        bool => json_bool_validator,
+        number => json_number_validator,
+        string => json_string_validator,
+        object => json_object_validator
+    },
+
+    Format = {object, [{fields, [
         {"foo", bool, mandatory},
         {"bar", number, optional}
     ]}, dynamic, use_maps]},
@@ -77,15 +89,6 @@ json_object_validator_fields_test() ->
         <<"foo">> => false,
         <<"bar">> => 42,
         <<"quz">> => <<"Hello world!">>
-    }, FormatWithDynamic, Validators),
-
-    % Test lazy validation.
-    {invalid, {keys, Keys}} = term_validator:validate(#{
-        <<"bar">> => false,
-        <<"quz">> => <<"Hello world!">>
     }, Format, Validators),
-    true = lists:member({"foo", missing}, Keys),
-    true = lists:member({"bar", invalid, not_number}, Keys),
-    true = lists:member({"quz", unexpected}, Keys),
 
     ok.

@@ -35,51 +35,61 @@ pre_validate(Term, Options, Validators) when is_map(Term) ->
     Fields = proplists:get_value(fields, Options),
     Dynamic = proplists:get_value(dynamic, Options, false),
 
-    Keys0 = lists:foldr(
+    MissingFields = lists:foldr(
         fun
             ({Name, _Format, mandatory}, Accumulator) ->
                 case maps:is_key(list_to_binary(Name), Term) of
                     true ->
                         Accumulator;
                     false ->
-                        [{Name, missing}|Accumulator]
+                        [Name|Accumulator]
                 end;
-            ({Name, _Format, optional}, Accumulator) ->
+            ({_Name, _Format, optional}, Accumulator) ->
                 Accumulator
         end,
         [],
         Fields
     ),
-    Keys1 = maps:fold(
-        fun(Key, Value, Accumulator) ->
-            case proplists:lookup(binary_to_list(Key), Fields) of
-                none ->
-                    case Dynamic of
-                        true ->
-                            Accumulator;
-                        false ->
-                            [{binary_to_list(Key), unexpected}|Accumulator]
-                    end;
-                {Name, Format, _} ->
-                    case term_validator:validate(Value, Format, Validators) of
-                        valid ->
-                            Accumulator;
-                        {invalid, Reason} ->
-                            [{Name, invalid, Reason}|Accumulator]
-                    end
-            end
-        end,
-        Keys0,
-        Term
-    ),
-
-    case Keys1 of
+    case MissingFields of
         [] ->
-            {valid, Term, []};
+            {UnexpectedFields, InvalidFields} = maps:fold(
+                fun(Key, Value, {UnexpectedFields, InvalidFields} = Accumulator) ->
+                    case proplists:lookup(binary_to_list(Key), Fields) of
+                        none ->
+                            case Dynamic of
+                                true ->
+                                    Accumulator;
+                                false ->
+                                    {[binary_to_list(Key)|UnexpectedFields], InvalidFields}
+                            end;
+                        {Name, Format, _} ->
+                            case term_validator:validate(Value, Format, Validators) of
+                                valid ->
+                                    Accumulator;
+                                {invalid, Reason} ->
+                                    {UnexpectedFields, [{Name, Reason}|InvalidFields]}
+                            end
+                    end
+                end,
+                {[], []},
+                Term
+            ),
+
+            case UnexpectedFields of
+                [] ->
+                    case InvalidFields of
+                        [] ->
+                            {valid, Term, []};
+                        _ ->
+                            {invalid, {fields, InvalidFields}}
+                    end;
+                _ ->
+                    {invalid, {unexpected_fields, UnexpectedFields}}
+            end;
         _ ->
-            {invalid, {keys, Keys1}}
+            {invalid, {missing_fields, MissingFields}}
     end;
-pre_validate(Term, Options, _Validators) ->
+pre_validate(_Term, _Options, _Validators) ->
     {invalid, not_object}.
 
 validate(Term, _Option, _Validators) ->
