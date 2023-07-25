@@ -12,6 +12,7 @@
 -export_type([options/0]).
 
 -export([validate/2, validate/3]).
+-export([lazy_validate/2, lazy_validate/3]).
 -export([validators/0]).
 
 %%
@@ -29,10 +30,28 @@ validate(Term, Format) ->
     validate(Term, Format, []).
 
 -spec validate(term(), term_validator:format(), options()) -> term().
-validate(Term, Format, _Options) ->
-    % XXX: Apply the options.
-    NodeFormat = {json, [{format, Format}]},
-    term_validator:validate(Term, NodeFormat, validators()).
+validate(Term, Format, Options) ->
+    case lazy_validate(Term, Format, Options) of
+        valid ->
+            valid;
+        {invalid, [{Path, Reason}|_Errors]} ->
+            {invalid, Path, Reason}
+    end.
+
+-spec lazy_validate(term(), term_validator:format()) -> term().
+lazy_validate(Term, Format) ->
+    lazy_validate(Term, Format, []).
+
+-spec lazy_validate(term(), term_validator:format(), options()) -> term().
+lazy_validate(Term, Format, Options) ->
+    % We use our bootstrap validator to apply the global options recursively
+    % and to compute the paths for all errors.
+    NodeFormat = {node, [{format, Format}] ++ Options},
+    Validators = maps:merge(
+        validators(),
+        #{node => json_node_validator}
+    ),
+    term_validator:validate(Term, NodeFormat, Validators).
 
 -spec validators() -> #{atom() => module()}.
 validators() ->
@@ -48,6 +67,5 @@ validators() ->
         array => json_array_validator,
         object => json_object_validator,
         any_of => any_of_validator,
-        all_of => all_of_validator,
-        json => json_node_validator
+        all_of => all_of_validator
     }.

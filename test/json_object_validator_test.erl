@@ -15,14 +15,17 @@ json_object_validator_test() ->
     % library is to validate valid JSON-encodable Erlang terms which is
     % ensured by the library encoding the raw JSON text).
     Format = {object, [{fields, []}, use_maps]},
-    {invalid, not_object} = json_validator:validate(null, Format),
-    {invalid, not_object} = json_validator:validate(false, Format),
-    {invalid, not_object} = json_validator:validate(true, Format),
-    {invalid, not_object} = json_validator:validate(42, Format),
-    {invalid, not_object} = json_validator:validate(42.5, Format),
-    {invalid, not_object} = json_validator:validate(<<"Hello world!">>, Format),
-    {invalid, not_object} = json_validator:validate([], Format),
+    {invalid, [], not_object} = json_validator:validate(null, Format),
+    {invalid, [], not_object} = json_validator:validate(false, Format),
+    {invalid, [], not_object} = json_validator:validate(true, Format),
+    {invalid, [], not_object} = json_validator:validate(42, Format),
+    {invalid, [], not_object} = json_validator:validate(42.5, Format),
+    {invalid, [], not_object} = json_validator:validate(<<"Hello world!">>, Format),
+    {invalid, [], not_object} = json_validator:validate([], Format),
     valid = json_validator:validate(#{}, Format),
+
+    % XXX: Test with and without the 'use_maps' option as global options
+    %      (for now implementation always default to using maps).
 
     ok.
 
@@ -74,6 +77,10 @@ json_object_validator_fields_test() ->
 
 json_object_validator_dynamic_test() ->
     % Same format as above test, but with the "dynamic" option enabled.
+    Format = {object, [{fields, [
+        {"foo", bool, mandatory},
+        {"bar", number, optional}
+    ]}, dynamic, use_maps]},
     Validators = #{
         bool => json_bool_validator,
         number => json_number_validator,
@@ -81,10 +88,6 @@ json_object_validator_dynamic_test() ->
         object => json_object_validator
     },
 
-    Format = {object, [{fields, [
-        {"foo", bool, mandatory},
-        {"bar", number, optional}
-    ]}, dynamic, use_maps]},
     valid = term_validator:validate(#{
         <<"foo">> => false,
         <<"bar">> => 42,

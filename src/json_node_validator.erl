@@ -43,15 +43,45 @@ pre_validate(Term, Options, _Validators) ->
     {valid, Term, [{format, AdjustedFormat}]}.
 
 validate(Term, {format, Format}, Validators) ->
-    case term_validator:validate(Term, Format, Validators) of
+    % We remove this validator from the list of validators as it's just used
+    % to bootstrap the validation.
+    UpdatedValidators = maps:remove(node, Validators),
+
+    case term_validator:validate(Term, Format, UpdatedValidators) of
         valid ->
             {valid, Term};
         {invalid, Reason} ->
-            {invalid, Reason}
+            {invalid, compute_errors([], Format, Reason)}
     end.
 
 post_validate(_Term, _Validators) ->
     valid.
+
+compute_errors(Path, Format, Reason) when is_atom(Format) ->
+    % Normalize the format to be in its tuple form.
+    compute_errors(Path, {Format, []}, Reason);
+compute_errors(Path, {array, Options}, {items, InvalidItems}) ->
+    % If the node format is a JSON array and the invalid reason is because some
+    % items are invalid, then we compute the path for each invalid item.
+    ItemFormat = proplists:get_value(item, Options),
+    lists:foldr(
+        fun({Index, Reason}, Accumulator) ->
+            Accumulator ++ compute_errors(Path ++ [{index, Index}], ItemFormat, Reason)
+        end,
+        [],
+        InvalidItems
+    );
+compute_errors(Path, {object, Options}, {fields, InvalidFields}) ->
+    % If the node format is a JSON object and the invalid reason is because
+    % some fields are invalid, then we compute the path for each invalid field.
+    FieldsFormat = proplists:get_value(fields, Options),
+    lists:foldr(fun({Key, Reason}, Accumulator) ->
+        {Key, FieldFormat, _} = proplists:lookup(Key, FieldsFormat),
+        Accumulator ++ compute_errors(Path ++ [{key, Key}], FieldFormat, Reason)
+    end, [], InvalidFields);
+compute_errors(Path, _Format, Reason) ->
+    % The other reasons do not contain embedded reasons.
+    [{Path, Reason}].
 
 adjust_format(Format, Options) when is_atom(Format) ->
     % Normalize the format to be in its tuple form.

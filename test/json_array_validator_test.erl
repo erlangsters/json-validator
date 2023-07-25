@@ -15,14 +15,14 @@ json_array_validator_test() ->
     % library is to validate valid JSON-encodable Erlang terms which is
     % ensured by the library encoding the raw JSON text).
     Format = {array, [{item, any}]},
-    {invalid, not_array} = json_validator:validate(null, Format),
-    {invalid, not_array} = json_validator:validate(false, Format),
-    {invalid, not_array} = json_validator:validate(true, Format),
-    {invalid, not_array} = json_validator:validate(42, Format),
-    {invalid, not_array} = json_validator:validate(42.5, Format),
-    {invalid, not_array} = json_validator:validate(<<"Hello world!">>, Format),
+    {invalid, [], not_array} = json_validator:validate(null, Format),
+    {invalid, [], not_array} = json_validator:validate(false, Format),
+    {invalid, [], not_array} = json_validator:validate(true, Format),
+    {invalid, [], not_array} = json_validator:validate(42, Format),
+    {invalid, [], not_array} = json_validator:validate(42.5, Format),
+    {invalid, [], not_array} = json_validator:validate(<<"Hello world!">>, Format),
     valid = json_validator:validate([], Format),
-    {invalid, not_array} = json_validator:validate(#{}, Format),
+    {invalid, [], not_array} = json_validator:validate(#{}, Format),
 
     ok.
 
@@ -30,12 +30,16 @@ json_array_validator_options_test() ->
     % As it shares the implementation of the 'list' validator of ETV, we do
     % not need to test all its options thoroughly.
     Format = {array, [{item, number}, {length, {4, 6}}]},
+    Validators = #{
+        array => json_array_validator,
+        number => json_number_validator
+    },
     {invalid, {length, {must_be_greater_or_equal_to, 4}}} =
-        json_validator:validate([1, 2, 3], Format),
-    valid = json_validator:validate([1, 2, 3, 4], Format),
+        term_validator:validate([1, 2, 3], Format, Validators),
+    valid = term_validator:validate([1, 2, 3, 4], Format, Validators),
 
-    valid = json_validator:validate([1, 2, 3, 4, 5, 6], Format),
+    valid = term_validator:validate([1, 2, 3, 4, 5, 6], Format, Validators),
     {invalid, {length, {must_be_less_or_equal_to, 6}}} =
-        json_validator:validate([1, 2, 3, 4, 5, 6, 7], Format),
+        term_validator:validate([1, 2, 3, 4, 5, 6, 7], Format, Validators),
 
     ok.

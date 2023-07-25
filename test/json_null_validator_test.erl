@@ -16,13 +16,17 @@ json_null_validator_test() ->
     % ensured by the library encoding the raw JSON text).
     Format = null,
     valid = json_validator:validate(null, Format),
-    {invalid, not_null} = json_validator:validate(false, Format),
-    {invalid, not_null} = json_validator:validate(true, Format),
-    {invalid, not_null} = json_validator:validate(42, Format),
-    {invalid, not_null} = json_validator:validate(42.5, Format),
-    {invalid, not_null} = json_validator:validate(<<"Hello world!">>, Format),
-    {invalid, not_null} = json_validator:validate([], Format),
-    {invalid, not_null} = json_validator:validate(#{}, Format),
+    {invalid, [], not_null} = json_validator:validate(false, Format),
+    {invalid, [], not_null} = json_validator:validate(true, Format),
+    {invalid, [], not_null} = json_validator:validate(42, Format),
+    {invalid, [], not_null} = json_validator:validate(42.5, Format),
+    {invalid, [], not_null} = json_validator:validate(<<"Hello world!">>, Format),
+    {invalid, [], not_null} = json_validator:validate([], Format),
+    {invalid, [], not_null} = json_validator:validate(#{}, Format),
+
+    % Use global options to change the expected 'null' atom value.
+    {invalid, [], not_null} = json_validator:validate(null, Format, [{null_term, nil}]),
+    valid = json_validator:validate(nil, Format, [{null_term, nil}]),
 
     ok.
 

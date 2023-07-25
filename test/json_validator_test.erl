@@ -11,5 +11,23 @@
 -include_lib("eunit/include/eunit.hrl").
 
 json_validator_test() ->
-    % XXX: To be implemented.
+    valid = json_validator:validate(null, null),
+    valid = json_validator:validate(null, {null, []}),
+
+    valid = json_validator:validate(false, bool),
+    valid = json_validator:validate(false, {bool, []}),
+    valid = json_validator:validate(true, bool),
+    valid = json_validator:validate(true, {bool, []}),
+
+    valid = json_validator:validate(42, number),
+    valid = json_validator:validate(42, {number, []}),
+    valid = json_validator:validate(42.5, number),
+    valid = json_validator:validate(42.5, {number, []}),
+
+    valid = json_validator:validate(<<"Hello world!">>, string),
+    valid = json_validator:validate(<<"Hello world!">>, {string, []}),
+
+    valid = json_validator:validate([], {array, [{item, any}]}),
+    valid = json_validator:validate(#{}, {object, [{fields, []}]}),
+
     ok.
