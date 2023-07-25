@@ -8,8 +8,8 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, March 2023
 %%
 -module(json_validator_test).
-
 -include_lib("eunit/include/eunit.hrl").
 
 json_validator_test() ->
+    % XXX: To be implemented.
     ok.
